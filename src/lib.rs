@@ -4,14 +4,14 @@ use errors::UnknownValueError;
 
 #[derive(Clone, Debug)]
 pub struct Yin {
-    threshold: f64,
+    threshold: f32,
     tau_max: usize,
     tau_min: usize,
     sample_rate: usize,
 }
 
 impl Yin {
-    pub fn init(threshold: f64, freq_min: f64, freq_max: f64, sample_rate: usize) -> Yin {
+    pub fn init(threshold: f32, freq_min: f32, freq_max: f32, sample_rate: usize) -> Yin {
         let tau_max = sample_rate / freq_min as usize;
         let tau_min = sample_rate / freq_max as usize;
         let res = Yin {
@@ -23,7 +23,7 @@ impl Yin {
         res
     }
 
-    pub fn estimate_freq(&self, audio_sample: &[f64]) -> Result<f64, Box<dyn std::error::Error>> {
+    pub fn estimate_freq(&self, audio_sample: &[f32]) -> Result<f32, Box<dyn std::error::Error>> {
         let sample_frequency = compute_sample_frequency(
             audio_sample,
             self.tau_min,
@@ -40,7 +40,7 @@ impl Yin {
     }
 }
 
-fn diff_function(audio_sample: &[f64], tau_max: usize) -> Vec<f64> {
+fn diff_function(audio_sample: &[f32], tau_max: usize) -> Vec<f32> {
     let mut diff_function = vec![0.0; tau_max];
     let tau_max = std::cmp::min(audio_sample.len(), tau_max);
     for tau in 1..tau_max {
@@ -52,18 +52,18 @@ fn diff_function(audio_sample: &[f64], tau_max: usize) -> Vec<f64> {
     diff_function
 }
 
-fn cmndf(raw_diff: &[f64]) -> Vec<f64> {
+fn cmndf(raw_diff: &[f32]) -> Vec<f32> {
     let mut running_sum = 0.0;
     let mut cmndf_diff = vec![0.0];
     for index in 1..raw_diff.len() {
         running_sum += raw_diff[index];
-        cmndf_diff.push(raw_diff[index] * index as f64 / running_sum);
+        cmndf_diff.push(raw_diff[index] * index as f32 / running_sum);
     }
 
     cmndf_diff
 }
 
-fn compute_diff_min(diff_fn: &[f64], min_tau: usize, max_tau: usize, harm_threshold: f64) -> usize {
+fn compute_diff_min(diff_fn: &[f32], min_tau: usize, max_tau: usize, harm_threshold: f32) -> usize {
     let mut tau = min_tau;
     while tau < max_tau {
         if diff_fn[tau] < harm_threshold {
@@ -78,23 +78,23 @@ fn compute_diff_min(diff_fn: &[f64], min_tau: usize, max_tau: usize, harm_thresh
 }
 
 fn convert_to_frequency(
-    diff_fn: &[f64],
+    diff_fn: &[f32],
     max_tau: usize,
     sample_period: usize,
     sample_rate: usize,
-) -> f64 {
-    let value: f64 = sample_rate as f64 / sample_period as f64;
+) -> f32 {
+    let value: f32 = sample_rate as f32 / sample_period as f32;
     value
 }
 
 // should return a tau that gives the # of elements of offset in a given sample
 pub fn compute_sample_frequency(
-    audio_sample: &[f64],
+    audio_sample: &[f32],
     tau_min: usize,
     tau_max: usize,
     sample_rate: usize,
-    threshold: f64,
-) -> f64 {
+    threshold: f32,
+) -> f32 {
     let diff_fn = diff_function(&audio_sample, tau_max);
     let cmndf = cmndf(&diff_fn);
     let sample_period = compute_diff_min(&cmndf, tau_min, tau_max, threshold);
@@ -104,12 +104,12 @@ pub fn compute_sample_frequency(
 #[cfg(test)]
 mod tests {
     use dasp::{signal, Signal};
-    fn produce_sample(sample_rate: usize, frequency: f64, noise_ratio: f64) -> Vec<f64> {
+    fn produce_sample(sample_rate: usize, frequency: f32, noise_ratio: f32) -> Vec<f32> {
         use rand::prelude::*;
         let mut rng = thread_rng();
-        let mut signal = signal::rate(sample_rate as f64).const_hz(frequency).sine();
-        let sample: Vec<f64> = (0..sample_rate)
-            .map(|_| signal.next() + noise_ratio * rng.gen::<f64>())
+        let mut signal = signal::rate(sample_rate as f32).const_hz(frequency).sine();
+        let sample: Vec<f32> = (0..sample_rate)
+            .map(|_| signal.next() + noise_ratio * rng.gen::<f32>())
             .collect();
         sample
     }

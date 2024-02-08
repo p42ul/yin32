@@ -1,4 +1,4 @@
-# Yin: Frequency Estimation For Rust
+# Yin32: Frequency Estimation For Rust (with f32 instead of f64)
 
 Yin provides a function for estimating the fundamental frequency of a signal, based on the following article:
 
